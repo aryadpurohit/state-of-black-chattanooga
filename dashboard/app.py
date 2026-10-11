@@ -1,10 +1,10 @@
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 # -----------------------------------
-# Page setup
+# Page Configuration
 # -----------------------------------
 
 st.set_page_config(
@@ -13,253 +13,522 @@ st.set_page_config(
     layout="wide"
 )
 
+# -----------------------------------
+# Load Data
+# -----------------------------------
+
+BASE_URL = (
+    "https://raw.githubusercontent.com/"
+    "aryadpurohit/state-of-black-chattanooga/main/"
+    "data/processed/"
+)
+
+@st.cache_data
+def load_data():
+    economics = pd.read_csv(
+        BASE_URL + "economics_index.csv"
+    )
+
+    components = pd.read_csv(
+        BASE_URL + "economics_components.csv"
+    )
+
+    return economics, components
+
+
+try:
+    economics, components = load_data()
+
+except Exception as error:
+    st.error(
+        "The data could not be loaded. "
+        "Check that the CSV files exist in "
+        "data/processed/ on GitHub."
+    )
+    st.exception(error)
+    st.stop()
+
 
 # -----------------------------------
-# Title
+# Data Preparation
 # -----------------------------------
 
-st.title("Economics")
-st.subheader("How has economic parity changed from 2022 to 2026?")
+economics["year"] = pd.to_numeric(
+    economics["year"], errors="coerce"
+)
 
+economics["economics_index"] = pd.to_numeric(
+    economics["economics_index"], errors="coerce"
+)
+
+components["year"] = pd.to_numeric(
+    components["year"], errors="coerce"
+)
+
+components["value"] = pd.to_numeric(
+    components["value"], errors="coerce"
+)
+
+economics = economics.dropna(
+    subset=["year", "economics_index"]
+).sort_values("year")
+
+components = components.dropna(
+    subset=["year", "indicator", "value"]
+).sort_values(["indicator", "year"])
+
+if economics.empty or components.empty:
+    st.error("The data files do not contain usable data.")
+    st.stop()
+
+
+# -----------------------------------
+# Dashboard Header
+# -----------------------------------
+
+st.title("State of Black Chattanooga")
 
 st.write(
-    "The Economics Index compares economic outcomes for Black and White "
-    "residents. A score of 100% represents full parity."
+    """
+    This dashboard explores economic parity trends in
+    Chattanooga using data compiled from the State of
+    Black Chattanooga reports for 2022, 2024, and 2026.
+
+    Use the charts and interactive explorer to examine
+    changes in the overall Economics Index and its
+    individual components.
+    """
 )
 
-
-# -----------------------------------
-# Load data
-# -----------------------------------
-
-economics_url = (
-    "https://raw.githubusercontent.com/"
-    "aryadpurohit/state-of-black-chattanooga/"
-    "main/data/processed/economics_index.csv"
+st.caption(
+    "Important: These are parity index scores, not raw "
+    "income, poverty, or employment rates. A score of "
+    "100 represents full Black–White parity. Differences "
+    "between report years may also reflect changes in "
+    "underlying data years or methodology."
 )
 
-components_url = (
-    "https://raw.githubusercontent.com/"
-    "aryadpurohit/state-of-black-chattanooga/"
-    "main/data/processed/economics_components.csv"
+st.divider()
+
+
+# -----------------------------------
+# Overall Economics Index
+# -----------------------------------
+
+st.header("Overall Economics Index")
+
+st.write(
+    "Compare the overall Economics Index across report years."
 )
 
+economics = economics.sort_values("year")
 
-economics = pd.read_csv(economics_url)
-components = pd.read_csv(components_url)
+first_row = economics.iloc[0]
+latest_row = economics.iloc[-1]
 
-
-# -----------------------------------
-# Economics Index
-# -----------------------------------
-
-st.header("Economics Index")
-
+starting_score = first_row["economics_index"]
+latest_score = latest_row["economics_index"]
+overall_change = latest_score - starting_score
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric(
-    "2022",
-    f"{economics.loc[economics['year'] == 2022, 'economics_index'].iloc[0]}%"
-)
+with col1:
+    st.metric(
+        "Latest Index Score",
+        f"{latest_score:.0f}"
+    )
 
-col2.metric(
-    "2024",
-    f"{economics.loc[economics['year'] == 2024, 'economics_index'].iloc[0]}%"
-)
+with col2:
+    st.metric(
+        "Change Since First Report",
+        f"{overall_change:+.0f} points"
+    )
 
-col3.metric(
-    "2026",
-    f"{economics.loc[economics['year'] == 2026, 'economics_index'].iloc[0]}%"
-)
-
-
-# -----------------------------------
-# Economics Index trend
-# -----------------------------------
+with col3:
+    st.metric(
+        "First Report Score",
+        f"{starting_score:.0f}"
+    )
 
 st.subheader("Economics Index Trend")
 
-fig, ax = plt.subplots()
+index_chart = economics.set_index("year")[
+    ["economics_index"]
+]
 
-ax.plot(
-    economics["year"],
-    economics["economics_index"],
-    marker="o"
+st.line_chart(index_chart)
+
+st.dataframe(
+    economics.rename(
+        columns={
+            "year": "Year",
+            "economics_index": "Economics Index Score"
+        }
+    ),
+    hide_index=True,
+    use_container_width=True
 )
 
-ax.set_xlabel("Year")
-ax.set_ylabel("Economics Index (%)")
-ax.set_title("Economics Index, 2022–2026")
-
-ax.set_xticks(economics["year"])
-
-st.pyplot(fig)
+st.divider()
 
 
 # -----------------------------------
-# Economic Components
+# Interactive Economic Component Explorer
 # -----------------------------------
 
-st.header("Economic Components")
+st.header("Explore an Economic Component")
 
 st.write(
-    "The Economics Index is represented by four components: "
-    "Income, Poverty, Employment, and Housing & Wealth."
+    """
+    Select a component to examine its parity scores over time.
+    The metrics, chart, and table will update automatically.
+    """
 )
 
+indicators = sorted(
+    components["indicator"].unique().tolist()
+)
 
-# Get 2026 values
+preferred_order = [
+    "Income",
+    "Poverty",
+    "Employment",
+    "Housing & Wealth"
+]
 
-income_2026 = components[
-    (components["year"] == 2026) &
-    (components["indicator"] == "Income")
-]["value"].iloc[0]
+indicators = [
+    indicator
+    for indicator in preferred_order
+    if indicator in indicators
+] + [
+    indicator
+    for indicator in indicators
+    if indicator not in preferred_order
+]
 
-poverty_2026 = components[
-    (components["year"] == 2026) &
-    (components["indicator"] == "Poverty")
-]["value"].iloc[0]
+selected_indicator = st.selectbox(
+    "Choose an economic component:",
+    indicators
+)
 
-employment_2026 = components[
-    (components["year"] == 2026) &
-    (components["indicator"] == "Employment")
-]["value"].iloc[0]
+selected_data = components[
+    components["indicator"] == selected_indicator
+].sort_values("year")
 
-housing_2026 = components[
-    (components["year"] == 2026) &
-    (components["indicator"] == "Housing & Wealth")
-]["value"].iloc[0]
+first_component = selected_data.iloc[0]
+latest_component = selected_data.iloc[-1]
 
+component_start = first_component["value"]
+component_latest = latest_component["value"]
+component_change = component_latest - component_start
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        f"Latest {int(latest_component['year'])} Score",
+        f"{component_latest:.0f}%"
+    )
+
+with col2:
+    st.metric(
+        "Change Across Available Years",
+        f"{component_change:+.0f} percentage points"
+    )
+
+with col3:
+    st.metric(
+        f"First {int(first_component['year'])} Score",
+        f"{component_start:.0f}%"
+    )
+
+st.subheader(
+    f"{selected_indicator}: "
+    f"{int(selected_data['year'].min())}–"
+    f"{int(selected_data['year'].max())}"
+)
+
+component_chart = selected_data.set_index("year")[["value"]]
+
+st.line_chart(component_chart)
+
+st.subheader("Score Details")
+
+display_data = selected_data[
+    ["year", "value"]
+].rename(
+    columns={
+        "year": "Year",
+        "value": "Parity Score (%)"
+    }
+)
+
+display_data["Year"] = display_data["Year"].astype(int)
+
+st.dataframe(
+    display_data,
+    hide_index=True,
+    use_container_width=True
+)
+
+st.divider()
+
+
+# -----------------------------------
+# 2026 Economic Component Cards
+# -----------------------------------
+
+st.header("Economic Components in 2026")
+
+latest_year = int(components["year"].max())
+
+latest_components = components[
+    components["year"] == latest_year
+]
+
+component_values = dict(
+    zip(
+        latest_components["indicator"],
+        latest_components["value"]
+    )
+)
 
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric("Income", f"{income_2026}%")
-col2.metric("Poverty", f"{poverty_2026}%")
-col3.metric("Employment", f"{employment_2026}%")
-col4.metric("Housing & Wealth", f"{housing_2026}%")
+with col1:
+    if "Income" in component_values:
+        st.metric(
+            "Income",
+            f"{component_values['Income']:.0f}%"
+        )
+
+with col2:
+    if "Poverty" in component_values:
+        st.metric(
+            "Poverty",
+            f"{component_values['Poverty']:.0f}%"
+        )
+
+with col3:
+    if "Employment" in component_values:
+        st.metric(
+            "Employment",
+            f"{component_values['Employment']:.0f}%"
+        )
+
+with col4:
+    if "Housing & Wealth" in component_values:
+        st.metric(
+            "Housing & Wealth",
+            f"{component_values['Housing & Wealth']:.0f}%"
+        )
+
+st.caption(
+    f"Component parity scores for the latest available year ({latest_year})."
+)
+
+st.divider()
 
 
 # -----------------------------------
-# Component trends
+# Component Trends
 # -----------------------------------
 
-st.subheader("Economic Component Trends")
+st.header("All Economic Components Over Time")
+
+st.write(
+    "Compare how the four economic components changed "
+    "across the available report years."
+)
+
+component_pivot = components.pivot_table(
+    index="year",
+    columns="indicator",
+    values="value",
+    aggfunc="mean"
+).sort_index()
+
+st.line_chart(component_pivot)
+
+st.divider()
 
 
-fig, ax = plt.subplots()
+# -----------------------------------
+# Change from First to Latest Report
+# -----------------------------------
 
-for indicator in components["indicator"].unique():
+st.header("Economic Changes Across Report Years")
 
-    data = components[
+st.write(
+    """
+    This table shows the difference between the earliest
+    and latest available score for each component.
+    Positive values indicate an increase in the parity score;
+    negative values indicate a decrease.
+    """
+)
+
+component_changes = []
+
+for indicator in indicators:
+    indicator_data = components[
         components["indicator"] == indicator
-    ]
+    ].sort_values("year")
 
-    ax.plot(
-        data["year"],
-        data["value"],
-        marker="o",
-        label=indicator
+    if len(indicator_data) >= 2:
+        first = indicator_data.iloc[0]
+        latest = indicator_data.iloc[-1]
+
+        change = latest["value"] - first["value"]
+
+        component_changes.append({
+            "Component": indicator,
+            "Starting Year": int(first["year"]),
+            "Starting Score": first["value"],
+            "Latest Year": int(latest["year"]),
+            "Latest Score": latest["value"],
+            "Change (Percentage Points)": change
+        })
+
+changes_df = pd.DataFrame(component_changes)
+
+if not changes_df.empty:
+    changes_df["Starting Score"] = (
+        changes_df["Starting Score"].round(1)
     )
 
+    changes_df["Latest Score"] = (
+        changes_df["Latest Score"].round(1)
+    )
 
-ax.set_xlabel("Year")
-ax.set_ylabel("Parity Index (%)")
-ax.set_title("Economic Component Trends, 2022–2026")
-ax.set_xticks([2022, 2024, 2026])
+    changes_df["Change (Percentage Points)"] = (
+        changes_df["Change (Percentage Points)"].round(1)
+    )
 
-ax.legend()
+    st.dataframe(
+        changes_df,
+        hide_index=True,
+        use_container_width=True
+    )
 
-st.pyplot(fig)
-
-
-# -----------------------------------
-# Change from 2022 to 2026
-# -----------------------------------
-
-st.header("Change from 2022 to 2026")
-
-
-component_change = components.pivot(
-    index="indicator",
-    columns="year",
-    values="value"
-)
-
-
-component_change["change_2022_2026"] = (
-    component_change[2026] -
-    component_change[2022]
-)
-
-
-st.dataframe(
-    component_change[
-        [2022, 2024, 2026, "change_2022_2026"]
-    ]
-)
+st.divider()
 
 
 # -----------------------------------
-# Key findings
+# Key Findings
 # -----------------------------------
 
 st.header("Key Findings")
 
+if not changes_df.empty:
+    largest_improvement = changes_df.loc[
+        changes_df["Change (Percentage Points)"].idxmax()
+    ]
 
-largest_improvement = component_change[
-    "change_2022_2026"
-].idxmax()
+    largest_decline = changes_df.loc[
+        changes_df["Change (Percentage Points)"].idxmin()
+    ]
 
-largest_decline = component_change[
-    "change_2022_2026"
-].idxmin()
+    col1, col2 = st.columns(2)
 
+    with col1:
+        st.subheader("Largest Score Increase")
 
-improvement_value = component_change.loc[
-    largest_improvement,
-    "change_2022_2026"
-]
+        st.metric(
+            largest_improvement["Component"],
+            f"{largest_improvement['Change (Percentage Points)']:+.0f} points"
+        )
 
-decline_value = component_change.loc[
-    largest_decline,
-    "change_2022_2026"
-]
+        st.write(
+            "This component had the largest increase in its "
+            "parity score across the available years."
+        )
 
+    with col2:
+        st.subheader("Largest Score Decrease")
 
-col1, col2 = st.columns(2)
+        st.metric(
+            largest_decline["Component"],
+            f"{largest_decline['Change (Percentage Points)']:+.0f} points"
+        )
 
-col1.metric(
-    "Largest Improvement",
-    largest_improvement,
-    f"+{improvement_value} percentage points"
+        st.write(
+            "This component had the largest decrease in its "
+            "parity score across the available years."
+        )
+
+st.info(
+    """
+    These comparisons describe changes in scores. They do not
+    establish why the scores changed or prove that a particular
+    policy, event, or condition caused the change.
+    """
 )
 
-col2.metric(
-    "Largest Decline",
-    largest_decline,
-    f"{decline_value} percentage points"
-)
+st.divider()
 
 
 # -----------------------------------
-# Research questions
+# Questions for Further Analysis
 # -----------------------------------
 
 st.header("Questions for Further Analysis")
 
 st.write(
-    "• Why did employment parity improve while poverty parity declined?"
+    """
+    The following questions can guide the next phase of the project:
+    """
 )
 
-st.write(
-    "• What explains the difference between employment, income, and poverty outcomes?"
+st.markdown(
+    """
+    - What factors might help explain changes in the Economics Index?
+    - Why did the component scores move in different directions?
+    - How do the underlying data years and definitions compare
+      across the three reports?
+    - Are neighborhood-level data available to reveal geographic
+      differences within Chattanooga?
+    - Which additional indicators could help explain changes in
+      income, poverty, employment, and housing and wealth?
+    - What further research would be needed before proposing
+      policy recommendations?
+    """
 )
 
-st.write(
-    "• Which economic indicators show the largest disparities?"
-)
+st.divider()
 
-st.write(
-    "• How do these economic patterns vary across neighborhoods?"
+
+# -----------------------------------
+# Data Tables
+# -----------------------------------
+
+with st.expander("View the underlying data"):
+    st.subheader("Overall Economics Index Data")
+    st.dataframe(
+        economics,
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.subheader("Economic Component Data")
+    st.dataframe(
+        components,
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.download_button(
+        label="Download component data as CSV",
+        data=components.to_csv(index=False).encode("utf-8"),
+        file_name="economics_components.csv",
+        mime="text/csv"
+    )
+
+
+# -----------------------------------
+# Footer
+# -----------------------------------
+
+st.caption(
+    "State of Black Chattanooga | Economic Parity Analysis"
 )
