@@ -1,1 +1,18 @@
 
+[theme]
+base = "light"
+primaryColor = "#D71920"
+backgroundColor = "#F5F5F5"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#171717"
+font = "sans serif"
+headingFont = "sans serif"
+baseRadius = "small"
+borderColor = "#D9D9D9"
+dataframeHeaderBackgroundColor = "#EAEAEA"
+chartCategoricalColors = [
+    "#D71920",
+    "#202020",
+    "#777777",
+    "#B83A3A"
+]
