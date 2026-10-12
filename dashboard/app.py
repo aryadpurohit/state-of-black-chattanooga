@@ -86,29 +86,29 @@ if economics.empty or components.empty:
 # Dashboard Header
 # -----------------------------------
 
-st.title("State of Black Chattanooga")
+st.markdown("### COMMUNITY DATA • ECONOMIC EQUITY")
 
-st.write(
+st.title("STATE OF BLACK CHATTANOOGA")
+
+st.markdown(
     """
-    This dashboard explores economic parity trends in
-    Chattanooga using data compiled from the State of
-    Black Chattanooga reports for 2022, 2024, and 2026.
-
-    Use the charts and interactive explorer to examine
-    changes in the overall Economics Index and its
-    individual components.
+    **Tracking progress. Understanding disparities. Informing action.**
+    
+    An interactive look at economic parity and changes across
+    the 2022, 2024, and 2026 State of Black Chattanooga reports.
     """
-)
-
-st.caption(
-    "Important: These are parity index scores, not raw "
-    "income, poverty, or employment rates. A score of "
-    "100 represents full Black–White parity. Differences "
-    "between report years may also reflect changes in "
-    "underlying data years or methodology."
 )
 
 st.divider()
+
+st.caption(
+    "DATA NOTE: Parity index scores are not raw income, "
+    "poverty, or employment rates. A score of 100 represents "
+    "full Black–White parity. Underlying data years and "
+    "methodologies may differ across reports."
+)
+
+
 
 
 # -----------------------------------
