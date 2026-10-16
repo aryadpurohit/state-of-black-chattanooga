@@ -314,9 +314,11 @@ for _, row in economics.iterrows():
 ax.set_title(
     "Economics Index Across Report Years",
     loc="left",
-    fontsize=15,
+    fontsize=17,
     fontweight="bold",
+    color="#FFFFFF",
     pad=18
+)
 )
 
 ax.set_xlabel("Report Year")
