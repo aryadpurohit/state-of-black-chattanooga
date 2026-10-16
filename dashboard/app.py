@@ -776,6 +776,105 @@ st.divider()
 
 
 # -----------------------------------
+# REPORTS & PUBLICATIONS
+# -----------------------------------
+
+st.markdown("### 05 / GO TO THE SOURCE")
+st.header("Reports & Publications")
+
+st.markdown(
+    """
+    The findings in this dashboard should be read alongside
+    the original reports. Explore the publications below to
+    learn more about the data, methodology, and community
+    conditions discussed in the State of Black Chattanooga
+    reports.
+    """
+)
+
+st.markdown(
+    """
+    <div style="
+        background: linear-gradient(120deg, #242424, #111111);
+        border-left: 5px solid #E12B32;
+        padding: 24px;
+        margin: 12px 0 22px 0;
+    ">
+        <div style="
+            color: #E12B32;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        ">
+            OFFICIAL PUBLICATIONS
+        </div>
+        <div style="
+            color: #F5F5F5;
+            font-size: 23px;
+            font-weight: 750;
+            margin-top: 8px;
+        ">
+            Go beyond the dashboard.
+        </div>
+        <div style="
+            color: #B7B7B7;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-top: 8px;
+        ">
+            Read the original research from the Urban League
+            of Greater Chattanooga and explore the context
+            behind the data.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("#### State of Black Chattanooga 2024")
+    st.write(
+        "The report examines economic, educational, health, "
+        "and social outcomes for Black residents in "
+        "Chattanooga and Hamilton County."
+    )
+    st.link_button(
+        "Read the 2024 Report",
+        "https://www.ulchatt.net/s/state-of-black-chattanooga-2024-BOOK-FINAL-01.pdf",
+        use_container_width=True
+    )
+
+with col2:
+    st.markdown("#### State of Black Chattanooga 2022")
+    st.write(
+        "Review the earlier report to compare findings "
+        "and investigate changes across reporting periods."
+    )
+    st.link_button(
+        "Read the 2022 Report",
+        "https://www.ulchatt.net/s/UL-State-of-Black-Chattanooga-Booklet-20221.pdf",
+        use_container_width=True
+    )
+
+st.markdown("")
+
+st.link_button(
+    "Visit the Official Reports & Publications Page",
+    "https://www.ulchatt.net/reports/",
+    use_container_width=True
+)
+
+st.caption(
+    "Source: Urban League of Greater Chattanooga. "
+    "The dashboard's report-year labels do not necessarily "
+    "represent the underlying data collection years."
+)
+
+st.divider()
+
+# -----------------------------------
 # Methodology and Source Data
 # -----------------------------------
 
