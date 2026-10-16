@@ -319,7 +319,6 @@ ax.set_title(
     color="#FFFFFF",
     pad=18
 )
-)
 
 ax.set_xlabel("Report Year")
 ax.set_ylabel("Parity Index Score")
