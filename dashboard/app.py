@@ -480,8 +480,9 @@ for indicator in indicators:
 ax.set_title(
     "Parity Scores by Economic Component",
     loc="left",
-    fontsize=15,
+    fontsize=17,
     fontweight="bold",
+    color="#FFFFFF",
     pad=18
 )
 
