@@ -100,29 +100,41 @@ if economics.empty or components.empty:
 # Reusable Chart Styling
 # -----------------------------------
 
+
 def style_axis(ax):
-    ax.set_facecolor(PANEL)
-    ax.figure.set_facecolor(PANEL)
+    # Dark chart background
+    ax.set_facecolor("#1B1B1B")
+    ax.figure.set_facecolor("#1B1B1B")
 
-    ax.tick_params(colors=WHITE, labelsize=10)
-    ax.xaxis.label.set_color(MUTED)
-    ax.yaxis.label.set_color(MUTED)
-    ax.title.set_color(WHITE)
+    # Text colors
+    ax.xaxis.label.set_color("#D6D6D6")
+    ax.yaxis.label.set_color("#D6D6D6")
 
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color(GRID)
-    ax.spines["bottom"].set_color(GRID)
-
-    ax.grid(
-        axis="y",
-        color=GRID,
-        linestyle="--",
-        linewidth=0.7,
-        alpha=0.7
+    ax.tick_params(
+        axis="both",
+        colors="#E6E6E6",
+        labelsize=11
     )
 
+    # Gridlines
+    ax.grid(
+        axis="y",
+        color="#454545",
+        linestyle="-",
+        linewidth=0.7,
+        alpha=0.8
+    )
     ax.set_axisbelow(True)
+
+    # Borders
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#666666")
+    ax.spines["bottom"].set_color("#666666")
+
+    # Chart title
+    ax.title.set_color("#FFFFFF")
+    ax.title.set_fontweight("bold")
 
 
 # -----------------------------------
