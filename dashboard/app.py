@@ -598,8 +598,9 @@ for _, row in selected_data.iterrows():
 ax.set_title(
     f"{selected_indicator}: Score Over Time",
     loc="left",
-    fontsize=15,
+    fontsize=17,
     fontweight="bold",
+    color="#FFFFFF",
     pad=18
 )
 
