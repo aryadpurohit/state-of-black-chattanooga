@@ -103,8 +103,8 @@ education_snapshot = pd.DataFrame([
     {"Indicator": "Ready Graduate rate", "Black residents": 47, "White residents": 73, "Unit": "%", "Data year": "2026 report summary"},
 ])
 
-tab_overview, tab_economics, tab_education, tab_method = st.tabs([
-    "2026 Overview", "Economics & Wealth", "Education", "Sources & Methodology"
+tab_overview, tab_economics, tab_education, tab_explore, tab_method = st.tabs([
+    "2026 Overview", "Economics & Wealth", "Education", "Explore the Data", "Sources & Methodology"
 ])
 
 with tab_overview:
@@ -258,8 +258,114 @@ with tab_education:
     """, unsafe_allow_html=True)
     st.caption("The 2026 report's selected outcomes are shown as reported. Do not treat them as a complete measure of school quality or as proof of cause.")
 
+with tab_explore:
+    st.markdown('<div class="eyebrow">04 / EXPLORE THE DATA</div>', unsafe_allow_html=True)
+    st.header("Find a measure and explore the evidence")
+    st.write(
+        "Filter the available indicators by topic, search for a measure, compare the reported "
+        "Black and White values where available, and download the filtered results."
+    )
+
+    # Keep the indicator inventory explicit so users can see what is and is not available.
+    explore_rows = [
+        {"Topic": "Economics", "Indicator": "Employment Issues parity score", "Year": 2026,
+         "Black value": None, "White value": None, "Unit": "Parity index score",
+         "Value / score": 83, "Source note": "2026 report economic component score"},
+        {"Topic": "Economics", "Indicator": "Income parity score", "Year": 2026,
+         "Black value": None, "White value": None, "Unit": "Parity index score",
+         "Value / score": 63, "Source note": "2026 report economic component score"},
+        {"Topic": "Economics", "Indicator": "Housing & Wealth parity score", "Year": 2026,
+         "Black value": None, "White value": None, "Unit": "Parity index score",
+         "Value / score": 54, "Source note": "2026 report economic component score"},
+        {"Topic": "Economics", "Indicator": "Poverty parity score", "Year": 2026,
+         "Black value": None, "White value": None, "Unit": "Parity index score",
+         "Value / score": 31, "Source note": "2026 report economic component score"},
+        {"Topic": "Education", "Indicator": "Preschool / nursery enrollment", "Year": 2026,
+         "Black value": 15, "White value": 29, "Unit": "%", "Value / score": None,
+         "Source note": "Report chart; underlying data year should be checked against report notes"},
+        {"Topic": "Education", "Indicator": "College / graduate enrollment, ages 18–29", "Year": 2026,
+         "Black value": 40, "White value": 41, "Unit": "%", "Value / score": None,
+         "Source note": "2026 report summary; verify exact source note before publication"},
+        {"Topic": "Education", "Indicator": "Bachelor's degree attainment", "Year": 2026,
+         "Black value": 10, "White value": 28, "Unit": "%", "Value / score": None,
+         "Source note": "2026 report summary"},
+        {"Topic": "Education", "Indicator": "TNReady on-grade-level performance", "Year": 2026,
+         "Black value": 23, "White value": 60, "Unit": "%", "Value / score": None,
+         "Source note": "2026 report summary"},
+        {"Topic": "Education", "Indicator": "Ready Graduate rate", "Year": 2026,
+         "Black value": 47, "White value": 73, "Unit": "%", "Value / score": None,
+         "Source note": "2026 report summary"},
+    ]
+    explorer_df = pd.DataFrame(explore_rows)
+
+    f1, f2 = st.columns([1, 2])
+    with f1:
+        topic_filter = st.multiselect(
+            "Topic", options=sorted(explorer_df["Topic"].unique()),
+            default=sorted(explorer_df["Topic"].unique())
+        )
+    with f2:
+        search_term = st.text_input(
+            "Search indicators", placeholder="Try ‘degree’, ‘poverty’, or ‘enrollment’"
+        )
+
+    filtered = explorer_df[explorer_df["Topic"].isin(topic_filter)].copy()
+    if search_term.strip():
+        filtered = filtered[
+            filtered["Indicator"].str.contains(search_term.strip(), case=False, na=False)
+        ]
+
+    st.caption(f"{len(filtered)} indicator(s) match your filters.")
+    display_cols = ["Topic", "Indicator", "Year", "Black value", "White value",
+                    "Unit", "Value / score", "Source note"]
+    st.dataframe(filtered[display_cols], hide_index=True, use_container_width=True)
+
+    if not filtered.empty:
+        comparable = filtered.dropna(subset=["Black value", "White value"]).copy()
+        choices = comparable["Indicator"].tolist()
+        if choices:
+            st.subheader("Compare a specific outcome")
+            selected_compare = st.selectbox("Choose an indicator to compare", choices)
+            chosen = comparable[comparable["Indicator"] == selected_compare].iloc[0]
+            black_val, white_val = float(chosen["Black value"]), float(chosen["White value"])
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Black", f"{black_val:g}{chosen['Unit']}")
+            m2.metric("White", f"{white_val:g}{chosen['Unit']}")
+            m3.metric("Difference", f"{white_val-black_val:g} percentage points")
+            fig, ax = plt.subplots(figsize=(7.5, 3.4))
+            bars = ax.bar(["Black", "White"], [black_val, white_val],
+                          color=[RED, "#A6A6A6"], width=0.52)
+            ax.set_title(selected_compare, loc="left", fontsize=15, fontweight="bold",
+                         color=WHITE, pad=14)
+            ax.set_ylabel("Share (%)")
+            ax.set_ylim(0, max(white_val, black_val) * 1.25 + 2)
+            for bar, value in zip(bars, [black_val, white_val]):
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.7,
+                        f"{value:g}%", ha="center", color=WHITE, fontweight="bold")
+            style_axis(ax)
+            chart_theme(fig, ax)
+            st.caption("A difference in percentage points is a descriptive comparison, not an explanation of cause.")
+        else:
+            st.info("The selected results are parity index scores. These are not raw Black and White percentages, so they cannot be plotted as a demographic comparison.")
+
+    st.download_button(
+        "Download filtered data (CSV)",
+        filtered.to_csv(index=False).encode("utf-8"),
+        "state_of_black_chattanooga_filtered_data.csv",
+        "text/csv",
+        disabled=filtered.empty,
+    )
+    with st.expander("How to read these indicators"):
+        st.markdown("""
+        - **Parity index scores** summarize relative parity; they are not raw population percentages.
+        - **Black and White values** are shown only for indicators with reported group-specific values.
+        - A difference in percentage points describes a gap but does not explain its cause.
+        - Report year and underlying observation year may differ. Confirm each source note before making direct year-to-year comparisons.
+        - This explorer includes selected measures, not every indicator in the report.
+        """)
+
 with tab_method:
-    st.markdown('<div class="eyebrow">04 / SOURCES & METHODOLOGY</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">05 / SOURCES & METHODOLOGY</div>', unsafe_allow_html=True)
     st.header("Read the original research")
     st.write(
         "This dashboard summarizes selected findings from the State of Black Chattanooga 2026 report "
