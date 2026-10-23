@@ -1,21 +1,12 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# -----------------------------------
-# Page Configuration
-# -----------------------------------
-
 st.set_page_config(
     page_title="State of Black Chattanooga",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
 )
-
-# -----------------------------------
-# Colors
-# -----------------------------------
 
 RED = "#E12B32"
 WHITE = "#F5F5F5"
@@ -23,911 +14,287 @@ MUTED = "#B7B7B7"
 PANEL = "#1C1C1C"
 GRID = "#424242"
 
-# -----------------------------------
-# Load Data
-# -----------------------------------
-
-BASE_URL = (
-    "https://raw.githubusercontent.com/"
-    "aryadpurohit/state-of-black-chattanooga/main/"
-    "data/processed/"
-)
-
-
-@st.cache_data
-def load_data():
-    economics = pd.read_csv(
-        BASE_URL + "economics_index.csv"
-    )
-
-    components = pd.read_csv(
-        BASE_URL + "economics_components.csv"
-    )
-
-    return economics, components
-
-
-try:
-    economics, components = load_data()
-
-except Exception as error:
-    st.error(
-        "The data could not be loaded. Check that the "
-        "CSV files exist in data/processed/ on GitHub."
-    )
-    st.exception(error)
-    st.stop()
-
-
-# -----------------------------------
-# Clean and Validate Data
-# -----------------------------------
-
-economics["year"] = pd.to_numeric(
-    economics["year"], errors="coerce"
-)
-
-economics["economics_index"] = pd.to_numeric(
-    economics["economics_index"], errors="coerce"
-)
-
-components["year"] = pd.to_numeric(
-    components["year"], errors="coerce"
-)
-
-components["value"] = pd.to_numeric(
-    components["value"], errors="coerce"
-)
-
-economics = (
-    economics
-    .dropna(subset=["year", "economics_index"])
-    .sort_values("year")
-)
-
-components = (
-    components
-    .dropna(subset=["year", "indicator", "value"])
-    .sort_values(["indicator", "year"])
-)
-
-if economics.empty or components.empty:
-    st.error("The CSV files do not contain usable data.")
-    st.stop()
-
-
-# -----------------------------------
-# Reusable Chart Styling
-# -----------------------------------
-
+st.markdown("""
+<style>
+    .stApp { background: #101010; }
+    .block-container { padding-top: 2rem; padding-bottom: 3rem; }
+    h1, h2, h3 { letter-spacing: -0.02em; }
+    div[data-testid="stMetric"] {
+        background: #1C1C1C; border-top: 3px solid #E12B32;
+        padding: 16px; border-radius: 4px;
+    }
+    div[data-testid="stMetricLabel"] { color: #B7B7B7; }
+    .eyebrow { color: #E12B32; letter-spacing: 2px; font-size: 12px; font-weight: 800; }
+    .hero {
+        background: linear-gradient(120deg, #242424, #101010);
+        border-left: 6px solid #E12B32; padding: 28px 30px;
+        margin-bottom: 20px;
+    }
+    .hero h1 { color: #F5F5F5; font-size: 38px; margin: 8px 0; }
+    .hero p { color: #D0D0D0; font-size: 16px; line-height: 1.6; }
+    .insight {
+        background: #1C1C1C; border-left: 4px solid #E12B32;
+        padding: 16px 18px; margin: 8px 0 16px 0;
+    }
+    .small-note { color: #B7B7B7; font-size: 13px; }
+</style>
+""", unsafe_allow_html=True)
 
 def style_axis(ax):
-    # Dark chart background
     ax.set_facecolor("#1B1B1B")
     ax.figure.set_facecolor("#1B1B1B")
-
-    # Text colors
+    ax.tick_params(axis="both", colors="#E6E6E6", labelsize=10)
     ax.xaxis.label.set_color("#D6D6D6")
     ax.yaxis.label.set_color("#D6D6D6")
-
-    ax.tick_params(
-        axis="both",
-        colors="#E6E6E6",
-        labelsize=11
-    )
-
-    # Gridlines
-    ax.grid(
-        axis="y",
-        color="#454545",
-        linestyle="-",
-        linewidth=0.7,
-        alpha=0.8
-    )
+    ax.grid(axis="y", color=GRID, linewidth=0.7, alpha=0.8)
     ax.set_axisbelow(True)
-
-    # Borders
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
     ax.spines["left"].set_color("#666666")
     ax.spines["bottom"].set_color("#666666")
+    ax.title.set_color(WHITE)
 
-    # Chart title
-    ax.title.set_color("#FFFFFF")
-    ax.title.set_fontweight("bold")
+def chart_theme(fig, ax):
+    style_axis(ax)
+    fig.tight_layout()
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
 
-
-# -----------------------------------
-# Story Header
-# -----------------------------------
-
-st.markdown(
-    f"""
-    <div style="
-        background: linear-gradient(120deg, #202020, #101010);
-        border-left: 6px solid {RED};
-        padding: 30px 30px 26px 30px;
-        margin-bottom: 20px;
-    ">
-        <div style="
-            color: {RED};
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 3px;
-            margin-bottom: 14px;
-        ">
-            COMMUNITY DATA • ECONOMIC EQUITY
-        </div>
-        <div style="
-            color: {WHITE};
-            font-size: 38px;
-            font-weight: 800;
-            line-height: 1.12;
-        ">
-            STATE OF BLACK<br>CHATTANOOGA
-        </div>
-        <div style="
-            color: #D0D0D0;
-            font-size: 17px;
-            margin-top: 16px;
-            line-height: 1.6;
-        ">
-            Tracking economic parity. Understanding change.
-            Identifying the questions that matter next.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    This project examines economic parity across the 2022,
-    2024, and 2026 State of Black Chattanooga reports.
-    Rather than looking at each number in isolation, the
-    dashboard follows the overall trend, explores the
-    components behind it, and identifies areas for deeper
-    research.
-    """
-)
+st.markdown("""
+<div class="hero">
+  <div class="eyebrow">COMMUNITY DATA • 2026 SNAPSHOT</div>
+  <h1>STATE OF BLACK CHATTANOOGA</h1>
+  <p>What the latest Equality Index reveals about economic opportunity and education in Hamilton County—and where the gaps remain.</p>
+</div>
+""", unsafe_allow_html=True)
 
 st.caption(
-    "HOW TO READ THE DATA: These figures are parity index "
-    "scores, not raw poverty, income, or employment rates. "
-    "A score of 100 represents full Black–White parity. "
-    "Report years may reflect different underlying data "
-    "years or methodologies."
+    "Source: State of Black Chattanooga 2026, S&P Global Market Intelligence. "
+    "The report's 2026 update uses 2024 Census data for many measures; earlier index "
+    "periods use different underlying data years. Report-year comparisons should be read with that limitation in mind."
 )
 
-st.divider()
-
-
-# -----------------------------------
-# CHAPTER 1: The Big Picture
-# -----------------------------------
-
-st.markdown("### 01 / THE BIG PICTURE")
-st.header("Has economic parity moved forward?")
-
-first_row = economics.iloc[0]
-latest_row = economics.iloc[-1]
-
-starting_score = float(first_row["economics_index"])
-latest_score = float(latest_row["economics_index"])
-overall_change = latest_score - starting_score
-
-first_year = int(first_row["year"])
-latest_year = int(latest_row["year"])
-
-if overall_change > 0:
-    headline = "The overall index increased."
-elif overall_change < 0:
-    headline = "The overall index remains below its starting point."
-else:
-    headline = "The overall index is unchanged."
-
-st.markdown(
-    f"""
-    <div style="
-        background: {PANEL};
-        border-top: 3px solid {RED};
-        padding: 22px;
-        margin-bottom: 16px;
-    ">
-        <div style="
-            font-size: 12px;
-            letter-spacing: 2px;
-            color: {MUTED};
-            font-weight: 700;
-        ">
-            THE CENTRAL FINDING
-        </div>
-        <div style="
-            color: {WHITE};
-            font-size: 25px;
-            font-weight: 700;
-            margin-top: 8px;
-        ">
-            {headline}
-        </div>
-        <div style="
-            color: {MUTED};
-            margin-top: 8px;
-            line-height: 1.6;
-        ">
-            The Economics Index moved from {starting_score:.0f}
-            in {first_year} to {latest_score:.0f} in {latest_year}.
-            The overall change was {overall_change:+.0f} points.
-            The component scores help show why looking at the
-            overall index alone does not tell the whole story.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(
-        f"Economics Index · {first_year}",
-        f"{starting_score:.0f}"
-    )
-
-with col2:
-    st.metric(
-        f"Economics Index · {latest_year}",
-        f"{latest_score:.0f}",
-        delta=f"{overall_change:+.0f} points"
-    )
-
-with col3:
-    st.metric(
-        "Report Years Compared",
-        f"{economics['year'].nunique()}"
-    )
-
-st.subheader("The overall trend")
-
-fig, ax = plt.subplots(figsize=(10, 4.2))
-
-ax.plot(
-    economics["year"],
-    economics["economics_index"],
-    color=RED,
-    marker="o",
-    linewidth=3,
-    markersize=9
-)
-
-for _, row in economics.iterrows():
-    ax.annotate(
-        f"{row['economics_index']:.0f}",
-        (row["year"], row["economics_index"]),
-        xytext=(0, 12),
-        textcoords="offset points",
-        color=WHITE,
-        ha="center",
-        fontweight="bold"
-    )
-
-ax.set_title(
-    "Economics Index Across Report Years",
-    loc="left",
-    fontsize=17,
-    fontweight="bold",
-    color="#FFFFFF",
-    pad=18
-)
-
-ax.set_xlabel("Report Year")
-ax.set_ylabel("Parity Index Score")
-ax.set_xticks(economics["year"].astype(int))
-ax.set_ylim(0, 100)
-
-style_axis(ax)
-fig.tight_layout()
-
-st.pyplot(fig)
-plt.close(fig)
-
-st.caption(
-    "The index summarizes the overall economic parity measure. "
-    "Changes in the score alone do not establish the reasons "
-    "behind the trend."
-)
-
-st.divider()
-
-
-# -----------------------------------
-# CHAPTER 2: The Components Tell
-# a More Complicated Story
-# -----------------------------------
-
-st.markdown("### 02 / BEHIND THE INDEX")
-st.header("Four indicators. Different directions.")
-
-st.write(
-    """
-    The overall index can conceal important differences.
-    Income, poverty, employment, and housing and wealth
-    do not necessarily move together. Comparing them helps
-    identify where progress appears in the scores and where
-    further investigation is warranted.
-    """
-)
-
-preferred_order = [
-    "Income",
-    "Poverty",
-    "Employment",
-    "Housing & Wealth"
-]
-
-indicators = components["indicator"].unique().tolist()
-
-indicators = [
-    name for name in preferred_order if name in indicators
-] + [
-    name for name in indicators if name not in preferred_order
-]
-
-changes = []
-
-for indicator in indicators:
-    data = components[
-        components["indicator"] == indicator
-    ].sort_values("year")
-
-    if len(data) >= 2:
-        changes.append({
-            "Component": indicator,
-            "Starting score": float(data.iloc[0]["value"]),
-            "Latest score": float(data.iloc[-1]["value"]),
-            "Change": float(
-                data.iloc[-1]["value"] - data.iloc[0]["value"]
-            ),
-            "Starting year": int(data.iloc[0]["year"]),
-            "Latest year": int(data.iloc[-1]["year"])
-        })
-
-changes_df = pd.DataFrame(changes)
-
-for start in range(0, len(changes_df), 2):
-    cols = st.columns(2)
-
-    for offset, (_, row) in enumerate(
-        changes_df.iloc[start:start + 2].iterrows()
-    ):
-        with cols[offset]:
-            direction = (
-                "increase in score"
-                if row["Change"] > 0
-                else "decrease in score"
-                if row["Change"] < 0
-                else "no change in score"
-            )
-
-            st.markdown(
-                f"""
-                <div style="
-                    background: {PANEL};
-                    border-left: 4px solid {RED};
-                    padding: 18px;
-                    margin-bottom: 12px;
-                    min-height: 155px;
-                ">
-                    <div style="
-                        color: {MUTED};
-                        font-size: 12px;
-                        letter-spacing: 1.5px;
-                        text-transform: uppercase;
-                    ">
-                        {row['Component']}
-                    </div>
-                    <div style="
-                        color: {WHITE};
-                        font-size: 31px;
-                        font-weight: 750;
-                        margin: 8px 0;
-                    ">
-                        {row['Latest score']:.0f}
-                        <span style="
-                            color: {MUTED};
-                            font-size: 15px;
-                            font-weight: 400;
-                        "> / 100</span>
-                    </div>
-                    <div style="
-                        color: {RED if row['Change'] < 0 else WHITE};
-                        font-size: 14px;
-                        font-weight: 600;
-                    ">
-                        {row['Change']:+.0f} points
-                        <span style="
-                            color: {MUTED};
-                            font-weight: 400;
-                        "> since {row['Starting year']}</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-st.subheader("Comparing the four components")
-
-pivot = components.pivot_table(
-    index="year",
-    columns="indicator",
-    values="value",
-    aggfunc="mean"
-).sort_index()
-
-fig, ax = plt.subplots(figsize=(10, 5))
-
-for indicator in indicators:
-    if indicator in pivot.columns:
-        ax.plot(
-            pivot.index,
-            pivot[indicator],
-            marker="o",
-            linewidth=2.5,
-            markersize=6,
-            label=indicator
-        )
-
-ax.set_title(
-    "Parity Scores by Economic Component",
-    loc="left",
-    fontsize=17,
-    fontweight="bold",
-    color="#FFFFFF",
-    pad=18
-)
-
-ax.set_xlabel("Report Year")
-ax.set_ylabel("Parity Index Score")
-ax.set_xticks(pivot.index.astype(int))
-ax.set_ylim(0, 100)
-
-style_axis(ax)
-
-legend = ax.legend(
-    frameon=False,
-    ncol=2,
-    labelcolor=WHITE
-)
-
-fig.tight_layout()
-st.pyplot(fig)
-plt.close(fig)
-
-st.markdown(
-    """
-    **What stands out?**
-
-    The component trends move in different directions.
-    Housing & Wealth and Employment show higher scores in
-    the latest report than in the earliest report, while
-    Poverty shows a lower parity score. Income also ends
-    below its starting score.
-
-    These are descriptive findings. They do not, by
-    themselves, explain what caused the changes.
-    """
-)
-
-st.divider()
-
-
-# -----------------------------------
-# CHAPTER 3: Explore the Evidence
-# -----------------------------------
-
-st.markdown("### 03 / EXPLORE THE EVIDENCE")
-st.header("Take a closer look")
-
-st.write(
-    """
-    Choose an indicator to follow its score across the
-    available report years. Use this section to examine
-    the numbers behind the overall findings.
-    """
-)
-
-selected_indicator = st.selectbox(
-    "Select an economic component",
-    indicators
-)
-
-selected_data = components[
-    components["indicator"] == selected_indicator
-].sort_values("year")
-
-first_component = selected_data.iloc[0]
-latest_component = selected_data.iloc[-1]
-
-component_change = (
-    float(latest_component["value"])
-    - float(first_component["value"])
-)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric(
-        "Latest score",
-        f"{latest_component['value']:.0f}"
-    )
-
-with col2:
-    st.metric(
-        "Change across available years",
-        f"{component_change:+.0f} points"
-    )
-
-with col3:
-    st.metric(
-        "First score",
-        f"{first_component['value']:.0f}"
-    )
-
-fig, ax = plt.subplots(figsize=(10, 4))
-
-ax.plot(
-    selected_data["year"],
-    selected_data["value"],
-    color=RED,
-    marker="o",
-    linewidth=3,
-    markersize=9
-)
-
-for _, row in selected_data.iterrows():
-    ax.annotate(
-        f"{row['value']:.0f}",
-        (row["year"], row["value"]),
-        xytext=(0, 10),
-        textcoords="offset points",
-        color=WHITE,
-        ha="center",
-        fontweight="bold"
-    )
-
-ax.set_title(
-    f"{selected_indicator}: Score Over Time",
-    loc="left",
-    fontsize=17,
-    fontweight="bold",
-    color="#FFFFFF",
-    pad=18
-)
-
-ax.set_xlabel("Report Year")
-ax.set_ylabel("Parity Index Score")
-ax.set_xticks(selected_data["year"].astype(int))
-ax.set_ylim(0, 100)
-
-style_axis(ax)
-fig.tight_layout()
-
-st.pyplot(fig)
-plt.close(fig)
-
-display_data = selected_data[
-    ["year", "indicator", "value"]
-].rename(
-    columns={
-        "year": "Report Year",
-        "indicator": "Component",
-        "value": "Parity Score"
-    }
-)
-
-display_data["Report Year"] = (
-    display_data["Report Year"].astype(int)
-)
-
-st.dataframe(
-    display_data,
-    hide_index=True,
-    use_container_width=True
-)
-
-st.download_button(
-    "Download this component's data",
-    data=display_data.to_csv(index=False).encode("utf-8"),
-    file_name=(
-        selected_indicator.lower()
-        .replace(" ", "_")
-        .replace("&", "and")
-        + "_trend.csv"
-    ),
-    mime="text/csv"
-)
-
-st.divider()
-
-
-# -----------------------------------
-# CHAPTER 4: What Needs More Attention?
-# -----------------------------------
-
-st.markdown("### 04 / WHAT COMES NEXT")
-st.header("The numbers raise new questions")
-
-if not changes_df.empty:
-    largest_increase = changes_df.loc[
-        changes_df["Change"].idxmax()
-    ]
-
-    largest_decrease = changes_df.loc[
-        changes_df["Change"].idxmin()
-    ]
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown(
-            f"""
-            <div style="
-                background: {PANEL};
-                padding: 20px;
-                border-top: 3px solid {RED};
-                min-height: 190px;
-            ">
-                <div style="
-                    color: {MUTED};
-                    font-size: 12px;
-                    letter-spacing: 1.5px;
-                ">
-                    LARGEST INCREASE IN SCORE
-                </div>
-                <div style="
-                    color: {WHITE};
-                    font-size: 26px;
-                    font-weight: 700;
-                    margin-top: 12px;
-                ">
-                    {largest_increase['Component']}
-                </div>
-                <div style="
-                    color: {WHITE};
-                    font-size: 19px;
-                    margin-top: 5px;
-                ">
-                    +{largest_increase['Change']:.0f} points
-                </div>
-                <div style="
-                    color: {MUTED};
-                    font-size: 13px;
-                    margin-top: 10px;
-                ">
-                    This component recorded the largest
-                    score increase across the available years.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    with col2:
-        st.markdown(
-            f"""
-            <div style="
-                background: {PANEL};
-                padding: 20px;
-                border-top: 3px solid {RED};
-                min-height: 190px;
-            ">
-                <div style="
-                    color: {MUTED};
-                    font-size: 12px;
-                    letter-spacing: 1.5px;
-                ">
-                    LARGEST DECREASE IN SCORE
-                </div>
-                <div style="
-                    color: {WHITE};
-                    font-size: 26px;
-                    font-weight: 700;
-                    margin-top: 12px;
-                ">
-                    {largest_decrease['Component']}
-                </div>
-                <div style="
-                    color: {RED};
-                    font-size: 19px;
-                    margin-top: 5px;
-                ">
-                    {largest_decrease['Change']:.0f} points
-                </div>
-                <div style="
-                    color: {MUTED};
-                    font-size: 13px;
-                    margin-top: 10px;
-                ">
-                    This component recorded the largest
-                    score decrease across the available years.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-st.write("")
-
-st.subheader("Questions for the next phase of research")
-
-questions = [
-    (
-        "Data comparability",
-        "Do the reports use the same underlying data years, "
-        "definitions, and calculation methods?"
-    ),
-    (
-        "Neighborhood differences",
-        "Can these trends be examined at a neighborhood level "
-        "within Chattanooga or Hamilton County?"
-    ),
-    (
-        "Understanding the changes",
-        "What additional data would help explain why individual "
-        "parity scores changed?"
-    ),
-    (
-        "Policy and community response",
-        "What evidence would be needed to evaluate possible "
-        "programs or policy responses?"
-    )
-]
-
-for title, question in questions:
-    with st.expander(title):
-        st.write(question)
-
-st.divider()
-
-
-# -----------------------------------
-# REPORTS & PUBLICATIONS
-# -----------------------------------
-
-st.markdown("### 05 / GO TO THE SOURCE")
-st.header("Reports & Publications")
-
-st.markdown(
-    """
-    The findings in this dashboard should be read alongside
-    the original reports. Explore the publications below to
-    learn more about the data, methodology, and community
-    conditions discussed in the State of Black Chattanooga
-    reports.
-    """
-)
-
-st.markdown(
-    """
-    <div style="
-        background: linear-gradient(120deg, #242424, #111111);
-        border-left: 5px solid #E12B32;
-        padding: 24px;
-        margin: 12px 0 22px 0;
-    ">
-        <div style="
-            color: #E12B32;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 2px;
-        ">
-            OFFICIAL PUBLICATIONS
-        </div>
-        <div style="
-            color: #F5F5F5;
-            font-size: 23px;
-            font-weight: 750;
-            margin-top: 8px;
-        ">
-            Go beyond the dashboard.
-        </div>
-        <div style="
-            color: #B7B7B7;
-            font-size: 15px;
-            line-height: 1.6;
-            margin-top: 8px;
-        ">
-            Read the original research from the Urban League
-            of Greater Chattanooga and explore the context
-            behind the data.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("#### State of Black Chattanooga 2024")
+# Data below are transcribed from the 2026 report's summary charts and narrative.
+index_trend = pd.DataFrame({
+    "Report year": [2022, 2024, 2026],
+    "Overall Equality Index": [61, 61, 60],
+    "Economics Index": [60, 58, 59],
+    "Education Index": [60, 60, 55],
+    "Health Index": [64, 66, 67],
+})
+
+econ_2026 = pd.DataFrame({
+    "Economic component": ["Employment Issues", "Income", "Housing & Wealth", "Poverty"],
+    "Parity score": [83, 63, 54, 31],
+    "Weight within economics index": [20, 40, 20, 20],
+})
+
+education_index_trend = pd.DataFrame({
+    "Report year": [2022, 2024, 2026],
+    "Education Index": [60, 60, 55],
+})
+
+# 2026 report's stated outcomes; underlying observation year is usually 2024.
+education_snapshot = pd.DataFrame([
+    {"Indicator": "Children under 5 enrolled in preschool/nursery", "Black residents": 15, "White residents": 29, "Unit": "%", "Data year": 2024},
+    {"Indicator": "Population ages 18–29 enrolled in college/graduate program", "Black residents": 40, "White residents": 41, "Unit": "%", "Data year": 2024},
+    {"Indicator": "Population with a bachelor's degree", "Black residents": 10, "White residents": 28, "Unit": "%", "Data year": "2026 report summary"},
+    {"Indicator": "Students performing on grade level on TNReady", "Black residents": 23, "White residents": 60, "Unit": "%", "Data year": "2026 report summary"},
+    {"Indicator": "Ready Graduate rate", "Black residents": 47, "White residents": 73, "Unit": "%", "Data year": "2026 report summary"},
+])
+
+tab_overview, tab_economics, tab_education, tab_method = st.tabs([
+    "2026 Overview", "Economics & Wealth", "Education", "Sources & Methodology"
+])
+
+with tab_overview:
+    st.markdown('<div class="eyebrow">01 / THE BIG PICTURE</div>', unsafe_allow_html=True)
+    st.header("Equality remains below parity")
     st.write(
-        "The report examines economic, educational, health, "
-        "and social outcomes for Black residents in "
-        "Chattanooga and Hamilton County."
-    )
-    st.link_button(
-        "Read the 2024 Report",
-        "https://www.ulchatt.net/s/state-of-black-chattanooga-2024-BOOK-FINAL-01.pdf",
-        use_container_width=True
+        "The 2026 report places the overall Greater Chattanooga Equality Index at 60% of full "
+        "Black–White parity, down one point from 2024. The headline score hides different patterns "
+        "across economics, education, and health."
     )
 
-with col2:
-    st.markdown("#### State of Black Chattanooga 2022")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Overall Equality Index", "60%", "−1 point vs. 2024")
+    c2.metric("Economics Index", "59%", "45% of overall index")
+    c3.metric("Education Index", "55%", "−5 points vs. 2024")
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(index_trend["Report year"], index_trend["Overall Equality Index"], color=WHITE,
+            marker="o", linewidth=2.8, markersize=7, label="Overall")
+    ax.plot(index_trend["Report year"], index_trend["Economics Index"], color=RED,
+            marker="o", linewidth=2.4, markersize=6, label="Economics")
+    ax.plot(index_trend["Report year"], index_trend["Education Index"], color="#D9BFA3",
+            marker="o", linewidth=2.4, markersize=6, label="Education")
+    ax.plot(index_trend["Report year"], index_trend["Health Index"], color="#66B3B0",
+            marker="o", linewidth=2.4, markersize=6, label="Health")
+    ax.set_title("Three pillars, three different trajectories", loc="left", fontsize=16,
+                 fontweight="bold", color=WHITE, pad=16)
+    ax.set_xlabel("Report year")
+    ax.set_ylabel("Parity index score")
+    ax.set_xticks([2022, 2024, 2026])
+    ax.set_ylim(45, 72)
+    style_axis(ax)
+    ax.legend(frameon=False, ncol=4, labelcolor=WHITE)
+    chart_theme(fig, ax)
+
+    st.markdown("""
+    <div class="insight"><b>What stands out</b><br>
+    Health has improved across the three reports, economics has changed only modestly,
+    and education has fallen to 55% parity in 2026. The report says the overall index has
+    made no net gain since 2022.</div>
+    """, unsafe_allow_html=True)
+    st.caption("The report labels 2022, 2024, and 2026 as pre-COVID, COVID, and post-COVID comparison periods. Underlying data years differ.")
+
+with tab_economics:
+    st.markdown('<div class="eyebrow">02 / ECONOMICS & WEALTH</div>', unsafe_allow_html=True)
+    st.header("Employment is comparatively strong; poverty parity is weakest")
     st.write(
-        "Review the earlier report to compare findings "
-        "and investigate changes across reporting periods."
+        "Rather than repeating the overall index in several charts, this section focuses on the "
+        "2026 breakdown and the different economic conditions it points toward."
     )
-    st.link_button(
-        "Read the 2022 Report",
-        "https://www.ulchatt.net/s/UL-State-of-Black-Chattanooga-Booklet-20221.pdf",
-        use_container_width=True
+    fig, ax = plt.subplots(figsize=(9, 4.4))
+    plot_data = econ_2026.sort_values("Parity score")
+    bars = ax.barh(plot_data["Economic component"], plot_data["Parity score"], color=RED, height=0.58)
+    ax.set_title("2026 economic component scores", loc="left", fontsize=16, fontweight="bold",
+                 color=WHITE, pad=16)
+    ax.set_xlabel("Parity score (100 = full parity)")
+    ax.set_xlim(0, 100)
+    for bar, value in zip(bars, plot_data["Parity score"]):
+        ax.text(value + 1.5, bar.get_y() + bar.get_height()/2, f"{value}%",
+                va="center", color=WHITE, fontweight="bold")
+    style_axis(ax)
+    ax.grid(axis="x", color=GRID, linewidth=0.7, alpha=0.8)
+    ax.grid(axis="y", visible=False)
+    chart_theme(fig, ax)
+
+    left, right = st.columns(2)
+    with left:
+        st.metric("Highest component", "Employment · 83%")
+        st.write("The report identifies employment as the strongest economic sub-pillar.")
+    with right:
+        st.metric("Lowest component", "Poverty · 31%")
+        st.write("The report identifies poverty as the area with the greatest economic disparity.")
+    st.markdown("""
+    <div class="insight"><b>Question worth investigating</b><br>
+    The report notes that employment parity is relatively stronger than poverty parity.
+    This suggests that having employment and achieving economic security are not the same thing.
+    The index alone cannot establish the reasons; occupation, wages, hours, and household costs
+    would be useful next measures to examine.</div>
+    """, unsafe_allow_html=True)
+
+    with st.expander("Historical context: economic index"):
+        fig, ax = plt.subplots(figsize=(8, 3.4))
+        ax.plot(index_trend["Report year"], index_trend["Economics Index"], color=RED,
+                marker="o", linewidth=3, markersize=8)
+        for _, row in index_trend.iterrows():
+            ax.annotate(f"{row['Economics Index']}%", (row["Report year"], row["Economics Index"]),
+                        xytext=(0, 10), textcoords="offset points", color=WHITE, ha="center")
+        ax.set_title("Economics index: 2022–2026", loc="left", fontsize=15, fontweight="bold", color=WHITE)
+        ax.set_xlabel("Report year")
+        ax.set_ylabel("Parity score")
+        ax.set_xticks([2022, 2024, 2026])
+        ax.set_ylim(45, 70)
+        chart_theme(fig, ax)
+        st.caption("2022: 60%; 2024: 58%; 2026: 59%, according to the report.")
+
+with tab_education:
+    st.markdown('<div class="eyebrow">03 / EDUCATION & OPPORTUNITY</div>', unsafe_allow_html=True)
+    st.header("Education is the clearest area of concern in the 2026 index")
+    st.write(
+        "Education represents 30% of the overall Equality Index. Its parity score fell to 55% in 2026, "
+        "reversing the gains shown in 2024. The report breaks education into student risk factors, "
+        "post-secondary attainment, scores, and education quality."
     )
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Education Index", "55%", "−5 points vs. 2024")
+    c2.metric("Bachelor's degree", "10% Black", "vs. 28% White")
+    c3.metric("TNReady on grade level", "23% Black", "vs. 60% White")
 
-st.markdown("")
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    ax.plot(education_index_trend["Report year"], education_index_trend["Education Index"],
+            color=RED, marker="o", linewidth=3, markersize=8)
+    for _, row in education_index_trend.iterrows():
+        ax.annotate(f"{row['Education Index']}%", (row["Report year"], row["Education Index"]),
+                    xytext=(0, 10), textcoords="offset points", color=WHITE, ha="center", fontweight="bold")
+    ax.set_title("Education parity has declined in the latest report", loc="left", fontsize=16,
+                 fontweight="bold", color=WHITE, pad=16)
+    ax.set_xlabel("Report year")
+    ax.set_ylabel("Education parity score")
+    ax.set_xticks([2022, 2024, 2026])
+    ax.set_ylim(40, 70)
+    chart_theme(fig, ax)
 
-st.link_button(
-    "Visit the Official Reports & Publications Page",
-    "https://www.ulchatt.net/reports/",
-    use_container_width=True
-)
+    st.subheader("A closer look at selected education outcomes")
+    st.write("These measures are not the same thing: some describe access, others attainment or school outcomes.")
+    selected_edu = st.selectbox("Choose an education indicator", education_snapshot["Indicator"].tolist())
+    row = education_snapshot.loc[education_snapshot["Indicator"] == selected_edu].iloc[0]
+    a, b, c = st.columns(3)
+    a.metric("Black residents/students", f"{row['Black residents']}%")
+    b.metric("White residents/students", f"{row['White residents']}%")
+    c.metric("Difference", f"{row['White residents'] - row['Black residents']} points")
+    fig, ax = plt.subplots(figsize=(7, 3.3))
+    labels = ["Black", "White"]
+    values = [row["Black residents"], row["White residents"]]
+    bars = ax.bar(labels, values, color=[RED, "#B7B7B7"], width=0.52)
+    ax.set_title(selected_edu, loc="left", fontsize=14, fontweight="bold", color=WHITE, pad=14)
+    ax.set_ylabel("Share (%)")
+    ax.set_ylim(0, max(values) * 1.25 + 2)
+    for bar, value in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.7, f"{value}%",
+                ha="center", color=WHITE, fontweight="bold")
+    style_axis(ax)
+    ax.grid(axis="y", color=GRID, linewidth=0.7, alpha=0.8)
+    chart_theme(fig, ax)
+    st.caption(f"Source: State of Black Chattanooga 2026. Data-year note: {row['Data year']}.")
+    st.markdown("""
+    <div class="insight"><b>What the report says</b><br>
+    The report describes significant disparities in TNReady proficiency and bachelor's-degree
+    attainment. It also reports that Black students are nearly twice as likely to be chronically
+    absent and four times as likely to be suspended. These findings point to distinct questions
+    about learning outcomes, educational access, and student risk factors.</div>
+    """, unsafe_allow_html=True)
+    st.caption("The 2026 report's selected outcomes are shown as reported. Do not treat them as a complete measure of school quality or as proof of cause.")
 
-st.caption(
-    "Source: Urban League of Greater Chattanooga. "
-    "The dashboard's report-year labels do not necessarily "
-    "represent the underlying data collection years."
-)
+with tab_method:
+    st.markdown('<div class="eyebrow">04 / SOURCES & METHODOLOGY</div>', unsafe_allow_html=True)
+    st.header("Read the original research")
+    st.write(
+        "This dashboard summarizes selected findings from the State of Black Chattanooga 2026 report "
+        "prepared by S&P Global Market Intelligence. The report describes the geography as Hamilton County."
+    )
+    st.link_button("Open the Urban League of Greater Chattanooga reports page",
+                   "https://www.ulchatt.net/reports/", use_container_width=True)
+    st.link_button("Read the State of Black Chattanooga 2024 report",
+                   "https://www.ulchatt.net/s/state-of-black-chattanooga-2024-BOOK-FINAL-01.pdf",
+                   use_container_width=True)
+    st.link_button("Read the State of Black Chattanooga 2022 report",
+                   "https://www.ulchatt.net/s/UL-State-of-Black-Chattanooga-Booklet-20221.pdf",
+                   use_container_width=True)
+    st.subheader("How to interpret the index")
+    st.markdown("""
+    - **100% means full parity** between Black and White residents for the index measure.
+    - The 2026 overall index combines Economics (45%), Education (30%), and Health (25%).
+    - The economic component weights are Income (40%), Poverty (20%), Employment Issues (20%), and Housing & Wealth (20%).
+    - Index scores are not raw rates. For example, a poverty parity score of 31% does **not** mean 31% of Black residents live in poverty.
+    - The report notes that the 2026 update uses 2024 Census data; 2024 and 2022 report periods use earlier underlying data. Comparisons should be interpreted cautiously.
+    - The dashboard presents descriptive comparisons and does not establish causation.
+    """)
+    with st.expander("Data used in the dashboard"):
+        st.subheader("Index trend data")
+        st.dataframe(index_trend, hide_index=True, use_container_width=True)
+        st.download_button("Download index trend CSV", index_trend.to_csv(index=False).encode("utf-8"),
+                           "equality_index_trend.csv", "text/csv")
+        st.subheader("2026 economic components")
+        st.dataframe(econ_2026, hide_index=True, use_container_width=True)
+        st.download_button("Download economic components CSV", econ_2026.to_csv(index=False).encode("utf-8"),
+                           "economics_2026.csv", "text/csv")
+        st.subheader("Selected education indicators")
+        st.dataframe(education_snapshot, hide_index=True, use_container_width=True)
+        st.download_button("Download education indicators CSV", education_snapshot.to_csv(index=False).encode("utf-8"),
+                           "education_2026.csv", "text/csv")
 
 st.divider()
-
-# -----------------------------------
-# Methodology and Source Data
-# -----------------------------------
-
-st.markdown("### METHODOLOGY & TRANSPARENCY")
-
-st.write(
-    """
-    This dashboard compares values recorded in the project's
-    processed CSV files. The comparisons describe differences
-    between reported scores; they do not establish causation.
-    Before drawing stronger conclusions, the underlying report
-    sources, data years, definitions, and index methodology
-    should be checked for comparability.
-    """
-)
-
-with st.expander("View the underlying datasets"):
-    st.subheader("Overall Economics Index")
-    st.dataframe(
-        economics,
-        hide_index=True,
-        use_container_width=True
-    )
-
-    st.subheader("Economic Components")
-    st.dataframe(
-        components,
-        hide_index=True,
-        use_container_width=True
-    )
-
-    st.download_button(
-        "Download all component data",
-        data=components.to_csv(index=False).encode("utf-8"),
-        file_name="economics_components.csv",
-        mime="text/csv"
-    )
-
-st.caption(
-    "State of Black Chattanooga | Economic Parity Analysis"
-)
+st.caption("State of Black Chattanooga • Independent student data project • Source: State of Black Chattanooga 2026, S&P Global Market Intelligence")
