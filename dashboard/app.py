@@ -103,8 +103,9 @@ education_snapshot = pd.DataFrame([
     {"Indicator": "Ready Graduate rate", "Black residents": 47, "White residents": 73, "Unit": "%", "Data year": "2026 report summary"},
 ])
 
-tab_overview, tab_economics, tab_education, tab_explore, tab_method = st.tabs([
-    "2026 Overview", "Economics & Wealth", "Education", "Explore the Data", "Sources & Methodology"
+tab_overview, tab_economics, tab_health, tab_education, tab_population, tab_work, tab_justice, tab_explore, tab_method = st.tabs([
+    "2026 Overview", "Economics & Wealth", "Health", "Education", "Population",
+    "Work & Industry", "Social Justice", "Explore the Data", "Sources & Methodology"
 ])
 
 with tab_overview:
@@ -258,6 +259,130 @@ with tab_education:
     """, unsafe_allow_html=True)
     st.caption("The 2026 report's selected outcomes are shown as reported. Do not treat them as a complete measure of school quality or as proof of cause.")
 
+with tab_health:
+    st.markdown('<div class="eyebrow">04 / HEALTH & WELLBEING</div>', unsafe_allow_html=True)
+    st.header("Health is the strongest index pillar—but progress is uneven")
+    st.write("Health accounts for 25% of the overall Equality Index. The 2026 health score reached 67%, up from 64% in 2022 and 66% in 2024. The report cautions that a modest overall gain can hide worsening outcomes in specific areas.")
+    health_components = pd.DataFrame([
+        {"Health component": "Health Insurance", "Weight in health index (%)": 10, "2026 parity score (%)": 99},
+        {"Health component": "Contagious disease", "Weight in health index (%)": 25, "2026 parity score (%)": 36},
+        {"Health component": "Chronic disease and cancer", "Weight in health index (%)": 30, "2026 parity score (%)": 76},
+        {"Health component": "Accidental and non-accidental death", "Weight in health index (%)": 15, "2026 parity score (%)": 77},
+        {"Health component": "Maternal and infant health issues", "Weight in health index (%)": 20, "2026 parity score (%)": 69},
+    ])
+    fig, ax = plt.subplots(figsize=(9, 4.4))
+    hp = health_components.sort_values("2026 parity score (%)")
+    bars = ax.barh(hp["Health component"], hp["2026 parity score (%)"], color=RED, height=.58)
+    ax.set_title("2026 health component parity scores", loc="left", fontsize=16, fontweight="bold", color=WHITE, pad=16)
+    ax.set_xlabel("Parity score (100 = full parity)"); ax.set_xlim(0, 110)
+    for bar, value in zip(bars, hp["2026 parity score (%)"]):
+        ax.text(value+1.5, bar.get_y()+bar.get_height()/2, f"{value}%", va="center", color=WHITE, fontweight="bold")
+    style_axis(ax); ax.grid(axis="x", color=GRID, linewidth=.7); ax.grid(axis="y", visible=False); chart_theme(fig, ax)
+    st.caption("Weights and scores transcribed from the 2026 report, page 9. Component scores are parity scores, not raw rates.")
+    h1, h2 = st.columns(2)
+    h1.metric("Highest component", "Insurance · 99%")
+    h2.metric("Lowest component", "Contagious disease · 36%")
+    st.subheader("What the report highlights")
+    st.markdown("""
+    - **Maternal and infant health:** premature-birth and low-birthweight rates for Black mothers declined; maternal tobacco use among births fell from 6.9% to 2.7%. The report says Black mothers still lag on nearly every indicator in this category.
+    - **Chronic disease:** heart-disease mortality, diabetes mortality, and prostate-cancer mortality increased for Black residents; heart-disease and stroke gaps widened.
+    - **Insurance:** the share of Black residents without insurance declined from 9.1% to 7.3%.
+    - **Communicable disease:** HIV/AIDS, gonorrhea, and chlamydia rates declined for Black residents, while the report says the syphilis rate increased nearly fivefold amid a broader 2023 outbreak.
+    - **Deaths and accidents:** the report flags motor-vehicle and other accidental deaths as areas where outcomes moved away from parity.
+    """)
+    with st.expander("Health measures tracked in the report"):
+        st.markdown("**Maternal and infant health:** prenatal care; premature births; low birthweight; teen pregnancies; infant mortality; smoking during pregnancy; live births when mother is unmarried.\n\n**Accidental and non-accidental death:** life expectancy; total mortality; years of potential life lost before 75; motor-vehicle mortality; accident mortality; suicide mortality; homicide.\n\n**Chronic disease and cancer:** Alzheimer’s; chronic lower respiratory disease; heart disease; stroke; diabetes; hypertension; kidney disease; cancer mortality and incidence (including lung, prostate, colon, breast, and pancreatic cancer); chronic-disease survey measures.\n\n**Contagious disease:** HIV/AIDS, gonorrhea, chlamydia, syphilis, influenza/pneumonia, and COVID-related measures.\n\n**Health insurance:** uninsured population, uninsured children under 6, private insurance, and public insurance.")
+
+with tab_population:
+    st.markdown('<div class="eyebrow">05 / POPULATION</div>', unsafe_allow_html=True)
+    st.header("Population trends provide important context")
+    st.write("The report includes Hamilton County population trends by race alongside the Equality Index. These counts and growth rates are context—not an additional Equality Index pillar.")
+    pop = pd.DataFrame([
+        {"Population measure": "Average annual growth, 2019–2024", "Group": "White (one race)", "Rate (%)": -0.21},
+        {"Population measure": "Average annual growth, 2019–2024", "Group": "Black or African American (one race)", "Rate (%)": -1.62},
+        {"Population measure": "Compound annual growth, 2018–2024", "Group": "White alone or in combination (ACOMR)", "Rate (%)": 0.88},
+        {"Population measure": "Compound annual growth, 2018–2024", "Group": "Black alone or in combination (ACOMR)", "Rate (%)": -0.10},
+        {"Population measure": "Compound annual growth, 2018–2024", "Group": "White alone, not Hispanic or Latino (NHL)", "Rate (%)": 0.26},
+        {"Population measure": "Compound annual growth, 2018–2024", "Group": "Black alone, not Hispanic or Latino (NHL)", "Rate (%)": -1.19},
+    ])
+    fig, ax = plt.subplots(figsize=(9, 4.1))
+    colors = [RED if v < 0 else "#B7B7B7" for v in pop["Rate (%)"]]
+    bars = ax.barh(pop["Group"], pop["Rate (%)"], color=colors, height=.62)
+    ax.axvline(0, color="#DDDDDD", linewidth=.8)
+    ax.set_title("Population growth rates reported by S&P Global", loc="left", fontsize=15, fontweight="bold", color=WHITE, pad=14)
+    ax.set_xlabel("Annual growth rate (%)")
+    for bar, value in zip(bars, pop["Rate (%)"]):
+        ax.text(value + (0.06 if value >= 0 else -0.06), bar.get_y()+bar.get_height()/2, f"{value:.2f}%", va="center", ha="left" if value >= 0 else "right", color=WHITE)
+    style_axis(ax); ax.grid(axis="x", color=GRID, linewidth=.7); ax.grid(axis="y", visible=False); chart_theme(fig, ax)
+    st.dataframe(pop, hide_index=True, use_container_width=True)
+    st.markdown("""
+    <div class="insight"><b>Report takeaway</b><br>
+    From 2019 to 2024, the report estimates average annual population growth of −0.21% for White residents (one race) and −1.62% for Black residents (one race). It also notes that the White population rebounded more strongly after 2021, while the Black population's trend remained downward overall.</div>
+    """, unsafe_allow_html=True)
+    st.caption("ACOMR means alone or in combination with one or more races; NHL means not Hispanic or Latino. These are the report's stated growth rates, not independently recalculated estimates.")
+
+with tab_work:
+    st.markdown('<div class="eyebrow">06 / WORK, OCCUPATIONS & INDUSTRY</div>', unsafe_allow_html=True)
+    st.header("Employment parity does not tell the whole labor-market story")
+    st.write("The report pairs an 83% employment parity score with a discussion of differences in occupation and projected industry mix. It suggests these patterns are useful context when examining why employment parity is stronger than income and poverty parity.")
+    st.subheader("Occupations differ by race (2023)")
+    occ = pd.DataFrame([
+        {"Occupation group": "Management, business, and financial", "Report describes White share as higher": True},
+        {"Occupation group": "Computer, engineering, and science", "Report describes White share as higher": True},
+        {"Occupation group": "Education, legal, community service, arts, and media", "Report describes White share as higher": True},
+        {"Occupation group": "Healthcare", "Report describes White share as higher": True},
+        {"Occupation group": "Natural resources, construction, and maintenance", "Report describes White share as higher": True},
+        {"Occupation group": "Service occupations", "Report describes White share as higher": False},
+        {"Occupation group": "Sales and office", "Report describes White share as higher": False},
+        {"Occupation group": "Production, transportation, and material moving", "Report describes White share as higher": False},
+    ])
+    occ["Pattern described in report"] = occ["Report describes White share as higher"].map({True:"White residents more likely",False:"Black residents more likely"})
+    st.dataframe(occ[["Occupation group", "Pattern described in report"]], hide_index=True, use_container_width=True)
+    st.subheader("Projected industry mix")
+    st.markdown("The report's Chattanooga, TN–GA forecast says transportation, trade, and utilities are projected to decline from 18% of employment in 2025 to 16% in 2036. Retail/trade is projected to decline by about one percentage point, leisure and hospitality to increase by about one point, and financial activities to decline by about one point as shares of total employment.")
+    with st.expander("Economic measures listed in the report glossary"):
+        st.markdown("**Income:** median household income; median male weekly earnings; median female weekly earnings; median family income.\n\n**Poverty:** residents below the poverty line; below 50% and 125% of poverty; below poverty among children under 18, adults 18–64, and adults 65+; SNAP/food-stamp benefits; cash public assistance income.\n\n**Employment:** unemployment rate; labor-force participation; employment-to-population ratio; not in labor force; salaried employment.\n\n**Housing and wealth:** median home value; public transportation to work; employer businesses per adult population; overcrowding in owner- and renter-occupied units; average household size; owner-occupied and renter-occupied housing.")
+    st.caption("The occupation page provides charted comparisons, but this dashboard only states directional findings from the report narrative rather than inventing exact bar values.")
+
+with tab_justice:
+    st.markdown('<div class="eyebrow">07 / SOCIAL JUSTICE</div>', unsafe_allow_html=True)
+    st.header("The report examines arrests and policing data")
+    st.write("The Social Justice section includes the Black share of Black-and-White arrests by offense for 2024–2026, plus a per-capita comparison for 2024. These measures describe arrest data; they do not, by themselves, establish the causes of differences or the prevalence of offending.")
+    st.metric("2024 arrest rate per capita", "≈2×", "Black residents vs. White residents")
+    st.caption("The report's page 20 chart lists 1.6% for Black residents and 0.8% for White residents. Data compiled July 31, 2026; sources: FBI Crime Data and ACS.")
+    st.subheader("Selected arrest-share trends shown in the report")
+    arrest_rows = [
+        {"Offense": "Aggravated assault", "2024": 48, "2025": 50, "2026": 37},
+        {"Offense": "All other larceny", "2024": 15, "2025": 16, "2026": 28},
+        {"Offense": "Counterfeiting/forgery", "2024": 19, "2025": 22, "2026": 12},
+        {"Offense": "Credit card / ATM fraud", "2024": 36, "2025": 14, "2026": 25},
+        {"Offense": "Criminal sexual crime", "2024": 61, "2025": 49, "2026": 36},
+        {"Offense": "Drug equipment violations", "2024": 18, "2025": 19, "2026": 16},
+        {"Offense": "Drug narcotic violations", "2024": 28, "2025": 30, "2026": 32},
+        {"Offense": "False pretenses / swindle", "2024": 35, "2025": 17, "2026": 9},
+        {"Offense": "Impersonation", "2024": 37, "2025": 29, "2026": 17},
+        {"Offense": "Intimidation", "2024": 40, "2025": 51, "2026": 46},
+        {"Offense": "Larceny-theft", "2024": 29, "2025": 16, "2026": 15},
+        {"Offense": "Motor vehicle theft", "2024": 44, "2025": 17, "2026": 13},
+        {"Offense": "Simple assault", "2024": 40, "2025": 44, "2026": 51},
+        {"Offense": "Weapon law violations", "2024": 57, "2025": 60, "2026": 40},
+    ]
+    arrest_df = pd.DataFrame(arrest_rows)
+    offense = st.selectbox("Choose an offense", arrest_df["Offense"].tolist())
+    chosen = arrest_df[arrest_df["Offense"] == offense].iloc[0]
+    fig, ax = plt.subplots(figsize=(7, 3.3))
+    vals = [chosen["2024"], chosen["2025"], chosen["2026"]]
+    bars = ax.bar(["2024", "2025", "2026"], vals, color=["#777777", "#999999", RED], width=.55)
+    ax.set_title(f"Black arrests as a share of Black + White arrests: {offense}", loc="left", fontsize=13, fontweight="bold", color=WHITE, pad=14)
+    ax.set_ylabel("Share of arrests (%)"); ax.set_ylim(0, 110)
+    for bar, value in zip(bars, vals): ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+2, f"{value}%", ha="center", color=WHITE, fontweight="bold")
+    style_axis(ax); chart_theme(fig, ax)
+    st.dataframe(arrest_df, hide_index=True, use_container_width=True)
+    st.download_button("Download selected arrest-share table (CSV)", arrest_df.to_csv(index=False).encode("utf-8"), "social_justice_arrest_shares.csv", "text/csv")
+    st.caption("Dashes in the source table mean no percentage was displayed for that offense/year; only a subset of the report's offenses is transcribed here. The report's source is S&P Global Market Intelligence calculations based on FBI.gov data.")
+    with st.expander("Other Social Justice data included in the report"):
+        st.write("The appendix identifies biased-based policing overview data and public CPD arrest charges data from the Chattanooga Open Data Portal's Policing and Racial Equity resources.")
+
 with tab_explore:
     st.markdown('<div class="eyebrow">04 / EXPLORE THE DATA</div>', unsafe_allow_html=True)
     st.header("Find a measure and explore the evidence")
@@ -268,6 +393,14 @@ with tab_explore:
 
     # Keep the indicator inventory explicit so users can see what is and is not available.
     explore_rows = [
+        {"Topic": "Health", "Indicator": "Health Insurance parity score", "Year": 2026, "Black value": None, "White value": None, "Unit": "Parity index score", "Value / score": 99, "Source note": "Health component score, report p. 9"},
+        {"Topic": "Health", "Indicator": "Contagious disease parity score", "Year": 2026, "Black value": None, "White value": None, "Unit": "Parity index score", "Value / score": 36, "Source note": "Health component score, report p. 9"},
+        {"Topic": "Health", "Indicator": "Chronic disease and cancer parity score", "Year": 2026, "Black value": None, "White value": None, "Unit": "Parity index score", "Value / score": 76, "Source note": "Health component score, report p. 9"},
+        {"Topic": "Health", "Indicator": "Accidental and non-accidental death parity score", "Year": 2026, "Black value": None, "White value": None, "Unit": "Parity index score", "Value / score": 77, "Source note": "Health component score, report p. 9"},
+        {"Topic": "Health", "Indicator": "Maternal and infant health parity score", "Year": 2026, "Black value": None, "White value": None, "Unit": "Parity index score", "Value / score": 69, "Source note": "Health component score, report p. 9"},
+        {"Topic": "Population", "Indicator": "Average annual population growth, White (one race), 2019–2024", "Year": 2026, "Black value": None, "White value": None, "Unit": "% per year", "Value / score": -0.21, "Source note": "Report p. 13"},
+        {"Topic": "Population", "Indicator": "Average annual population growth, Black (one race), 2019–2024", "Year": 2026, "Black value": None, "White value": None, "Unit": "% per year", "Value / score": -1.62, "Source note": "Report p. 13"},
+        {"Topic": "Social Justice", "Indicator": "Arrests per capita, Black residents, 2024", "Year": 2024, "Black value": 1.6, "White value": 0.8, "Unit": "%", "Value / score": None, "Source note": "Report p. 20; approximate 2x comparison"},
         {"Topic": "Economics", "Indicator": "Employment Issues parity score", "Year": 2026,
          "Black value": None, "White value": None, "Unit": "Parity index score",
          "Value / score": 83, "Source note": "2026 report economic component score"},
@@ -379,6 +512,30 @@ with tab_method:
     st.link_button("Read the State of Black Chattanooga 2022 report",
                    "https://www.ulchatt.net/s/UL-State-of-Black-Chattanooga-Booklet-20221.pdf",
                    use_container_width=True)
+    st.subheader("Coverage of the full report")
+    st.write("The report covers three Equality Index pillars—Economics, Health, and Education—and also presents population, occupations/industry, and social justice analyses. Some detailed charts are summarized qualitatively where the report's graphic does not provide an accessible exact value for every bar.")
+    with st.expander("Full indicator inventory from the report appendix"):
+        inventory = pd.DataFrame([
+            {"Sector": "Economics", "Category": "Income", "Measures listed": "Median household income; median male weekly earnings; median female weekly earnings; median family income"},
+            {"Sector": "Economics", "Category": "Poverty", "Measures listed": "Below poverty; below 50% and 125% of poverty; poverty by age (under 18, 18–64, 65+); SNAP benefits; cash public assistance"},
+            {"Sector": "Economics", "Category": "Employment", "Measures listed": "Unemployment; labor-force participation; employment-to-population ratio; not in labor force; salaried employment"},
+            {"Sector": "Economics", "Category": "Housing & Wealth", "Measures listed": "Median home value; public transportation to work; employer businesses per adult population; overcrowding; household size; owner-occupied and renter-occupied units"},
+            {"Sector": "Health", "Category": "Maternal & Infant Health", "Measures listed": "Prenatal care; premature births; low birthweight; teen pregnancies; infant mortality; smoking during pregnancy; births when mother unmarried"},
+            {"Sector": "Health", "Category": "Death & Injury", "Measures listed": "Life expectancy; total mortality; years of potential life lost; motor-vehicle mortality; accident mortality; suicide; homicide"},
+            {"Sector": "Health", "Category": "Chronic Disease & Cancer", "Measures listed": "Alzheimer’s; chronic lower respiratory disease; heart disease; stroke; diabetes; hypertension; kidney disease; cancer mortality/incidence; survey measures"},
+            {"Sector": "Health", "Category": "Contagious Disease", "Measures listed": "HIV/AIDS; gonorrhea; chlamydia; syphilis; influenza/pneumonia; COVID-related measures"},
+            {"Sector": "Health", "Category": "Insurance", "Measures listed": "Uninsured population; uninsured children under 6; private insurance; public insurance"},
+            {"Sector": "Education", "Category": "Quality", "Measures listed": "Four-year graduation; Ready Graduate; TCAP participation/valid score; per-pupil spending; teacher credentials/experience; student-teacher ratio; TNReady proficiency; TVAAS"},
+            {"Sector": "Education", "Category": "Scores", "Measures listed": "End-of-course tests; MSAA; TNReady; ELA and math success rates"},
+            {"Sector": "Education", "Category": "Post-secondary Attainment", "Measures listed": "Less than high school; high school graduate; some college/associate degree; bachelor’s degree; graduate/professional degree"},
+            {"Sector": "Education", "Category": "Student Risk Factors", "Measures listed": "Zero-tolerance offenses; suspension; alternative school; expulsion; dropout; chronic absenteeism"},
+            {"Sector": "Population", "Category": "Population trends", "Measures listed": "Population size and growth by race; alone or in combination; Hispanic/non-Hispanic groupings"},
+            {"Sector": "Work & Industry", "Category": "Occupations / Industry", "Measures listed": "Employment by occupation; employment share by industry; industry forecasts"},
+            {"Sector": "Social Justice", "Category": "Policing & Arrests", "Measures listed": "Arrest shares by offense and year; per-capita arrests; biased-based policing overview; public CPD arrest charges"},
+        ])
+        st.dataframe(inventory, hide_index=True, use_container_width=True)
+        st.download_button("Download full report indicator inventory (CSV)", inventory.to_csv(index=False).encode("utf-8"), "state_of_black_chattanooga_indicator_inventory.csv", "text/csv")
+
     st.subheader("How to interpret the index")
     st.markdown("""
     - **100% means full parity** between Black and White residents for the index measure.
